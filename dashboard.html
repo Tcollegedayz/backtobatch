@@ -1,21 +1,48 @@
-<!doctype html><html lang="en"><head><title>Dashboard — BackToBatch</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#5b4bdb">
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard — BackToBatch</title>
 <link rel="stylesheet" href="assets/style.css">
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script defer src="assets/config.js"></script><script defer src="assets/app.js"></script></head><body><div class="demo-note">Live Supabase authentication enabled</div>
+<script defer src="assets/config.js"></script>
+<script defer src="assets/app.js"></script>
+</head>
+<body>
+<div class="demo-note">Live Supabase authentication enabled</div>
 <nav class="navbar"><div class="container nav-inner">
 <a class="brand" href="index.html"><span class="brand-mark">B</span><span>BackToBatch</span></a>
-<div class="nav-links"><a href="index.html#features">Features</a><a href="dashboard.html" data-auth="user" class="hidden">Dashboard</a></div>
 <div class="nav-actions">
-<a class="btn btn-light" href="login.html" data-auth="guest">Log in</a>
-<a class="btn btn-primary" href="register.html" data-auth="guest">Join Free</a>
-<a class="btn btn-light hidden" href="dashboard.html" data-auth="user">My Account</a>
-<button class="btn btn-danger hidden" data-auth="user" onclick="logout()">Log out</button>
-</div></div></nav>
+<a class="btn btn-light" href="admin-dashboard.html" id="adminLink" style="display:none">Admin Panel</a>
+<button class="btn btn-danger" onclick="hardLogout()">Log out</button>
+</div>
+</div></nav>
+
 <main class="container page-space">
-<div class="page-title-row"><div><div class="eyebrow">Protected member area</div><h1 style="font-size:3rem;margin-top:10px">My Dashboard</h1><p class="muted">Logged in as <strong data-user-email></strong></p></div><button class="btn btn-danger" onclick="logout()">Log out</button></div>
+<div class="page-title-row">
+<div>
+<div class="eyebrow">Protected member area</div>
+<h1 style="font-size:3rem;margin-top:10px">My Dashboard</h1>
+<p class="muted">Logged in as <strong data-user-email></strong></p>
+</div>
+</div>
+
 <div id="dashMessage" class="alert"></div>
-<section class="panel"><div class="profile-head"><div id="avatar" class="avatar profile-avatar">?</div><div class="grow"><h2 id="welcomeName">Complete your profile</h2><p class="muted">Your information will help match you with the correct college batch.</p></div><span class="badge">✓ Authenticated</span></div></section>
-<section><div class="section-bar"><h2>My profile</h2><span class="muted">Only you can edit this</span></div>
+
+<section class="panel">
+<div class="profile-head">
+<div id="avatar" class="avatar profile-avatar">?</div>
+<div class="grow">
+<h2 id="welcomeName">Complete your profile</h2>
+<p class="muted">Your information will help match you with the correct college batch.</p>
+</div>
+<span class="badge">✓ Authenticated</span>
+</div>
+</section>
+
+<section>
+<div class="section-bar"><h2>My profile</h2><span class="muted">Only you can edit this</span></div>
 <form id="profileForm" class="panel form-grid">
 <label class="full">Full name<input class="input" id="full_name" required></label>
 <label>City<input class="input" id="city" placeholder="Hyderabad"></label>
@@ -23,29 +50,94 @@
 <label class="full">College or school<input class="input" id="institution" placeholder="Osmania University"></label>
 <label>Course<input class="input" id="course" placeholder="MBA"></label>
 <label>Graduation year<input class="input" id="graduation_year" type="number" min="1950" max="2040"></label>
-<label class="full">About me<textarea class="input" id="bio" rows="4" placeholder="Share a short introduction for old classmates."></textarea></label>
-<button id="saveBtn" class="btn btn-primary full">Save Profile</button></form></section>
-<section><div class="section-bar"><h2>My batches</h2></div><div class="empty-state"><div class="icon">🎓</div><h3>Batch search comes next</h3><p>Your account and profile are now live. The next update will add institution search, create/join batch and member directories.</p></div></section>
-</main><footer><div class="container footer-inner"><div class="brand"><span class="brand-mark">B</span><span>BackToBatch</span></div><div>© 2026 BackToBatch. Every batch has someone missing.</div></div></footer>
+<label class="full">About me<textarea class="input" id="bio" rows="4"></textarea></label>
+<button id="saveBtn" class="btn btn-primary full">Save Profile</button>
+</form>
+</section>
+</main>
+
 <script>
 let currentUser=null;
-async function protect(){
- const session=await getSession();if(!session){location.href='login.html';return;}
- currentUser=session.user;document.querySelector('[data-user-email]').textContent=currentUser.email;
- const {data,error}=await sb.from('profiles').select('*').eq('id',currentUser.id).maybeSingle();
- if(error)return showMessage('dashMessage',error.message);
- const p=data||{full_name:currentUser.user_metadata?.full_name||''};
- ['full_name','city','phone','institution','course','graduation_year','bio'].forEach(k=>{document.getElementById(k).value=p[k]??'';});
- document.getElementById('welcomeName').textContent=p.full_name||'Complete your profile';
- document.getElementById('avatar').textContent=initials(p.full_name||currentUser.email);
+
+function timeoutPromise(ms){
+  return new Promise((_,reject)=>setTimeout(()=>reject(new Error('Request timed out. Please try again.')),ms));
 }
+
+async function loadDashboard(){
+  const session=await getSession();
+  if(!session){
+    location.replace('login.html');
+    return;
+  }
+
+  currentUser=session.user;
+  document.querySelector('[data-user-email]').textContent=currentUser.email;
+
+  const access=await checkAdminAccess();
+  if(access.allowed){
+    document.getElementById('adminLink').style.display='inline-flex';
+  }
+
+  try{
+    const result=await Promise.race([
+      sb.rpc('get_my_profile'),
+      timeoutPromise(12000)
+    ]);
+
+    const {data,error}=result;
+    if(error) throw error;
+
+    const p=data || {full_name:currentUser.user_metadata?.full_name||''};
+    ['full_name','city','phone','institution','course','graduation_year','bio']
+      .forEach(k=>document.getElementById(k).value=p[k]??'');
+
+    document.getElementById('welcomeName').textContent=p.full_name||'Complete your profile';
+    document.getElementById('avatar').textContent=initials(p.full_name||currentUser.email);
+  }catch(err){
+    showMessage('dashMessage','Could not load profile: '+err.message);
+  }
+}
+
 document.getElementById('profileForm').addEventListener('submit',async(e)=>{
- e.preventDefault();const btn=document.getElementById('saveBtn');btn.classList.add('loading');btn.textContent='Saving...';
- const profile={id:currentUser.id,full_name:document.getElementById('full_name').value.trim(),city:document.getElementById('city').value.trim()||null,phone:document.getElementById('phone').value.trim()||null,institution:document.getElementById('institution').value.trim()||null,course:document.getElementById('course').value.trim()||null,graduation_year:Number(document.getElementById('graduation_year').value)||null,bio:document.getElementById('bio').value.trim()||null,updated_at:new Date().toISOString()};
- const {error}=await sb.from('profiles').upsert(profile);
- btn.classList.remove('loading');btn.textContent='Save Profile';
- if(error)return showMessage('dashMessage',error.message);
- document.getElementById('welcomeName').textContent=profile.full_name;document.getElementById('avatar').textContent=initials(profile.full_name);showMessage('dashMessage','Profile saved successfully.','success');
+  e.preventDefault();
+
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true;
+  btn.classList.add('loading');
+  btn.textContent='Saving...';
+
+  const payload={
+    new_full_name:document.getElementById('full_name').value.trim(),
+    new_city:document.getElementById('city').value.trim()||null,
+    new_phone:document.getElementById('phone').value.trim()||null,
+    new_institution:document.getElementById('institution').value.trim()||null,
+    new_course:document.getElementById('course').value.trim()||null,
+    new_graduation_year:Number(document.getElementById('graduation_year').value)||null,
+    new_bio:document.getElementById('bio').value.trim()||null
+  };
+
+  try{
+    const result=await Promise.race([
+      sb.rpc('save_my_profile',payload),
+      timeoutPromise(12000)
+    ]);
+
+    const {data,error}=result;
+    if(error) throw error;
+
+    document.getElementById('welcomeName').textContent=payload.new_full_name;
+    document.getElementById('avatar').textContent=initials(payload.new_full_name);
+    showMessage('dashMessage','Profile saved successfully.','success');
+  }catch(err){
+    showMessage('dashMessage','Profile could not be saved: '+err.message);
+  }finally{
+    btn.disabled=false;
+    btn.classList.remove('loading');
+    btn.textContent='Save Profile';
+  }
 });
-protect();
-</script></body></html>
+
+loadDashboard();
+</script>
+</body>
+</html>

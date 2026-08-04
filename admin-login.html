@@ -31,11 +31,11 @@
 </div></div>
 
 <script>
-window.addEventListener('load',async()=>{
-  const existing=await getSession();
-  if(existing){
-    const access=await checkAdminAccess();
-    if(access.allowed) location.href='admin-dashboard.html';
+window.addEventListener('load',()=>{
+  const params=new URLSearchParams(location.search);
+  if(params.get('logged_out')){
+    showMessage('adminLoginMessage','You have been logged out successfully.','success');
+    history.replaceState({},'', 'admin-login.html');
   }
 });
 
@@ -43,6 +43,7 @@ document.getElementById('adminLoginForm').addEventListener('submit',async(e)=>{
   e.preventDefault();
 
   const btn=document.getElementById('loginBtn');
+  btn.disabled=true;
   btn.classList.add('loading');
   btn.textContent='Checking access...';
 
@@ -52,6 +53,7 @@ document.getElementById('adminLoginForm').addEventListener('submit',async(e)=>{
   });
 
   if(error){
+    btn.disabled=false;
     btn.classList.remove('loading');
     btn.textContent='Open Admin Panel';
     return showMessage('adminLoginMessage',error.message);
@@ -59,16 +61,17 @@ document.getElementById('adminLoginForm').addEventListener('submit',async(e)=>{
 
   const access=await checkAdminAccess();
 
+  btn.disabled=false;
   btn.classList.remove('loading');
   btn.textContent='Open Admin Panel';
 
   if(access.error){
-    await sb.auth.signOut();
-    return showMessage('adminLoginMessage','Admin access check failed: '+access.error);
+    await hardLogout();
+    return;
   }
 
   if(!access.allowed){
-    await sb.auth.signOut();
+    await sb.auth.signOut({scope:'local'});
     return showMessage(
       'adminLoginMessage',
       access.suspended
@@ -77,7 +80,7 @@ document.getElementById('adminLoginForm').addEventListener('submit',async(e)=>{
     );
   }
 
-  location.href='admin-dashboard.html';
+  location.replace('admin-dashboard.html');
 });
 </script>
 </body>
