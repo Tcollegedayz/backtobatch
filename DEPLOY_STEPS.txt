@@ -1,0 +1,22 @@
+BACKTOBATCH — FREE GITHUB PAGES DEPLOYMENT
+
+1. Sign in to github.com.
+2. Click the + icon at the top-right and choose New repository.
+3. Repository name: backtobatch
+4. Select Public.
+5. Click Create repository.
+6. Click "uploading an existing file".
+7. Extract this ZIP on your computer.
+8. Upload index.html, 404.html, manifest.webmanifest, .nojekyll and README.md.
+9. Commit the files to the main branch.
+10. Open repository Settings.
+11. Select Pages from the left menu.
+12. Under Source, select "Deploy from a branch".
+13. Branch: main
+14. Folder: /(root)
+15. Click Save.
+
+Your URL:
+https://YOUR-GITHUB-USERNAME.github.io/backtobatch/
+
+Note: GitHub Pages is for this static showcase. Real account registration and database features require PHP/MySQL hosting.

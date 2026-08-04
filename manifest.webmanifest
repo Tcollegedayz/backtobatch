@@ -1,0 +1,9 @@
+{
+  "name": "BackToBatch",
+  "short_name": "BackToBatch",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f8fc",
+  "theme_color": "#5b4bdb",
+  "description": "Reconnect with classmates, teachers and college memories."
+}
