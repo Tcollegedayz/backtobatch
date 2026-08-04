@@ -26,9 +26,31 @@ async function updateNav(){
   if(email&&session) email.textContent=session.user.email;
 }
 
+async function hardLogout(){
+  try{
+    await sb.auth.signOut({scope:'local'});
+  }catch(err){
+    console.error('Logout error:',err);
+  }
+
+  // Remove stale Supabase auth data from this browser.
+  try{
+    for(let i=localStorage.length-1;i>=0;i--){
+      const key=localStorage.key(i);
+      if(key && (key.startsWith('sb-') || key.includes('supabase'))){
+        localStorage.removeItem(key);
+      }
+    }
+    sessionStorage.clear();
+  }catch(err){
+    console.error('Storage cleanup error:',err);
+  }
+
+  location.replace('admin-login.html?logged_out=1&t='+Date.now());
+}
+
 async function logout(){
-  await sb.auth.signOut();
-  location.href='index.html';
+  await hardLogout();
 }
 
 async function checkAdminAccess(){
@@ -43,7 +65,7 @@ async function checkAdminAccess(){
 async function requireAdmin(){
   const session=await getSession();
   if(!session){
-    location.href='admin-login.html';
+    location.replace('admin-login.html');
     return null;
   }
 
@@ -51,11 +73,10 @@ async function requireAdmin(){
 
   if(!access.allowed){
     if(access.suspended){
-      await sb.auth.signOut();
-      location.href='admin-login.html?reason=suspended';
+      await hardLogout();
       return null;
     }
-    location.href='dashboard.html?reason=not_admin';
+    location.replace('dashboard.html?reason=not_admin');
     return null;
   }
 
