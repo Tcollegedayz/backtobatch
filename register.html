@@ -1,0 +1,33 @@
+<!doctype html><html lang="en"><head><title>Create Account — BackToBatch</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#5b4bdb">
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script defer src="assets/config.js"></script><script defer src="assets/app.js"></script></head><body><div class="demo-note">Live Supabase authentication enabled</div>
+<nav class="navbar"><div class="container nav-inner">
+<a class="brand" href="index.html"><span class="brand-mark">B</span><span>BackToBatch</span></a>
+<div class="nav-links"><a href="index.html#features">Features</a><a href="dashboard.html" data-auth="user" class="hidden">Dashboard</a></div>
+<div class="nav-actions">
+<a class="btn btn-light" href="login.html" data-auth="guest">Log in</a>
+<a class="btn btn-primary" href="register.html" data-auth="guest">Join Free</a>
+<a class="btn btn-light hidden" href="dashboard.html" data-auth="user">My Account</a>
+<button class="btn btn-danger hidden" data-auth="user" onclick="logout()">Log out</button>
+</div></div></nav>
+<div class="auth-shell"><div class="auth-card"><div class="eyebrow">Join free</div><h1>Create your account</h1><p class="muted">Use an email address you can access for confirmation.</p>
+<div id="registerMessage" class="alert"></div>
+<form id="registerForm" class="stack">
+<label>Full name<input class="input" id="name" required minlength="2"></label>
+<label>Email<input class="input" id="email" type="email" required></label>
+<label>Password<input class="input" id="password" type="password" minlength="8" required></label>
+<label>Confirm password<input class="input" id="confirmPassword" type="password" minlength="8" required></label>
+<button id="registerBtn" class="btn btn-primary btn-block">Create Account</button></form>
+<p class="center muted">Already registered? <a class="link" href="login.html">Log in</a></p></div></div><footer><div class="container footer-inner"><div class="brand"><span class="brand-mark">B</span><span>BackToBatch</span></div><div>© 2026 BackToBatch. Every batch has someone missing.</div></div></footer>
+<script>
+document.getElementById('registerForm').addEventListener('submit',async(e)=>{
+ e.preventDefault();const btn=document.getElementById('registerBtn');const name=document.getElementById('name').value.trim();const email=document.getElementById('email').value.trim();const password=document.getElementById('password').value;const confirm=document.getElementById('confirmPassword').value;
+ if(password!==confirm)return showMessage('registerMessage','Passwords do not match.');
+ btn.classList.add('loading');btn.textContent='Creating account...';
+ const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name},emailRedirectTo:SITE_URL+'login.html'}});
+ btn.classList.remove('loading');btn.textContent='Create Account';
+ if(error)return showMessage('registerMessage',error.message);
+ if(data.session){location.href='dashboard.html';}else{showMessage('registerMessage','Account created. Check your email and click the confirmation link, then log in.','success');e.target.reset();}
+});
+</script></body></html>

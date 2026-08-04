@@ -1,33 +1,61 @@
-# BackToBatch — GitHub Pages Showcase
+# BackToBatch Supabase Login Upgrade
 
-A clickable frontend showcase for **BackToBatch**, a college and school friendship-reconnection platform.
+This package connects the GitHub Pages site to the Supabase project:
 
-## Live demo features
+- Project URL: `https://ohovoqxetqsjcmapdmcm.supabase.co`
+- Frontend key: publishable key only
+- Live site: `https://tcollegedayz.github.io/backtobatch/`
 
-- College and graduation-year search
-- Batch completion interface
-- Suggested classmate matches
-- Private connection-request simulation
-- Missing-classmate finder
-- Memory wall
-- Reunion event and date voting
-- Mobile-responsive interface
+## 1. Create the profile table
 
-> This GitHub Pages edition is a static showcase. It uses sample information and does not permanently store registrations or user data.
+In Supabase:
 
-## Publish on GitHub Pages
+1. Open **SQL Editor**
+2. Click **New query**
+3. Open `SUPABASE_SETUP.sql`
+4. Copy the entire contents
+5. Click **Run**
 
-1. Create a new **public** GitHub repository named `backtobatch`.
-2. Upload all files from this folder to the root of the repository.
-3. Open **Settings → Pages**.
-4. Under **Build and deployment**, choose **Deploy from a branch**.
-5. Select branch **main** and folder **/(root)**.
-6. Save.
+This creates the profile table, enables Row Level Security and restricts every user to their own profile.
 
-Your public URL will normally be:
+## 2. Configure authentication URLs
 
-`https://YOUR-USERNAME.github.io/backtobatch/`
+Open **Authentication → URL Configuration**.
 
-## Full application
+Set **Site URL** to:
 
-The production MVP requires PHP and MySQL hosting for real registration, login, communities, connections, memories and reunion data.
+`https://tcollegedayz.github.io/backtobatch/`
+
+Add this **Redirect URL**:
+
+`https://tcollegedayz.github.io/backtobatch/login.html`
+
+## 3. Keep email/password enabled
+
+Open **Authentication → Providers → Email** and keep Email enabled.
+
+For initial testing, you may either:
+- keep Confirm email enabled and click the confirmation email; or
+- temporarily disable Confirm email while testing.
+
+For public launch, email confirmation is recommended.
+
+## 4. Upload to GitHub
+
+Replace the existing repository files with the files in this ZIP.
+
+Important:
+- `index.html` must remain in the repository root.
+- Upload the `assets` folder.
+- Upload `login.html`, `register.html`, and `dashboard.html`.
+- Do not upload any Supabase secret or service-role key.
+
+## 5. Test
+
+1. Open `https://tcollegedayz.github.io/backtobatch/register.html`
+2. Register with an accessible email
+3. Confirm the email if requested
+4. Log in
+5. Open the dashboard
+6. Save the profile
+7. Refresh the page and confirm that the profile remains saved
