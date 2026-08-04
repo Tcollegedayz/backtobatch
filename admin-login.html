@@ -1,0 +1,41 @@
+<!doctype html><html lang="en"><head><title>Admin Login — BackToBatch</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#5b4bdb">
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script defer src="assets/config.js"></script><script defer src="assets/app.js"></script></head><body><div class="demo-note">BackToBatch secure administration</div>
+<nav class="navbar"><div class="container nav-inner">
+<a class="brand" href="index.html"><span class="brand-mark">B</span><span>BackToBatch</span></a>
+<div class="nav-actions"><a class="btn btn-light" href="index.html">Main Website</a></div>
+</div></nav>
+<div class="auth-shell"><div class="auth-card">
+<div class="eyebrow">Restricted access</div><h1>Administrator login</h1>
+<p class="muted">Use the same Supabase account that has been granted the admin role.</p>
+<div id="adminLoginMessage" class="alert"></div>
+<form id="adminLoginForm" class="stack">
+<label>Email<input class="input" id="email" type="email" required></label>
+<label>Password<input class="input" id="password" type="password" required></label>
+<button id="loginBtn" class="btn btn-primary btn-block">Open Admin Panel</button>
+</form>
+<p class="center muted"><a class="link" href="login.html">Regular user login</a></p>
+</div></div><footer><div class="container footer-inner"><div class="brand"><span class="brand-mark">B</span><span>BackToBatch Admin</span></div><div>Authorised administrators only</div></div></footer>
+<script>
+document.getElementById('adminLoginForm').addEventListener('submit',async(e)=>{
+ e.preventDefault();
+ const btn=document.getElementById('loginBtn');btn.classList.add('loading');btn.textContent='Checking access...';
+ const {data,error}=await sb.auth.signInWithPassword({
+   email:document.getElementById('email').value.trim(),
+   password:document.getElementById('password').value
+ });
+ if(error){btn.classList.remove('loading');btn.textContent='Open Admin Panel';return showMessage('adminLoginMessage',error.message);}
+ const {data:profile,error:profileError}=await sb.from('profiles').select('is_admin,is_suspended').eq('id',data.user.id).maybeSingle();
+ btn.classList.remove('loading');btn.textContent='Open Admin Panel';
+ if(profileError || !profile || !profile.is_admin){
+   await sb.auth.signOut();
+   return showMessage('adminLoginMessage','This account does not have administrator access.');
+ }
+ if(profile.is_suspended){
+   await sb.auth.signOut();
+   return showMessage('adminLoginMessage','This administrator account is suspended.');
+ }
+ location.href='admin-dashboard.html';
+});
+</script></body></html>

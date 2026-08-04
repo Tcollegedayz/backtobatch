@@ -1,0 +1,104 @@
+<!doctype html><html lang="en"><head><title>Admin Dashboard — BackToBatch</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#5b4bdb">
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script defer src="assets/config.js"></script><script defer src="assets/app.js"></script></head><body><div class="demo-note">BackToBatch secure administration</div>
+<nav class="navbar"><div class="container nav-inner">
+<a class="brand" href="index.html"><span class="brand-mark">B</span><span>BackToBatch</span></a>
+<div class="nav-actions"><a class="btn btn-light" href="index.html">Main Website</a></div>
+</div></nav>
+<main class="container page-space">
+<div class="page-title-row">
+<div><div class="eyebrow">Administration</div><h1 style="font-size:3rem;margin-top:10px">Platform Dashboard</h1><p class="muted">Manage registered users and monitor BackToBatch.</p></div>
+<div class="actions"><a class="btn btn-light" href="dashboard.html">User Dashboard</a><button class="btn btn-danger" onclick="logout()">Log out</button></div>
+</div>
+
+<div id="adminMessage" class="alert"></div>
+
+<section class="admin-grid">
+<div class="kpi"><span>Total users</span><strong id="totalUsers">—</strong></div>
+<div class="kpi"><span>Completed profiles</span><strong id="completeProfiles">—</strong></div>
+<div class="kpi"><span>Administrators</span><strong id="adminCount">—</strong></div>
+<div class="kpi"><span>Suspended users</span><strong id="suspendedCount">—</strong></div>
+</section>
+
+<section>
+<div class="admin-toolbar">
+<div><h2 style="margin:0">Registered users</h2><p class="muted" style="margin:4px 0 0">Search and manage member access.</p></div>
+<input class="input" id="userSearch" placeholder="Search name, email, college or city">
+</div>
+<div class="table-wrap">
+<table class="admin-table">
+<thead><tr><th>Member</th><th>College / Course</th><th>City</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+<tbody id="usersBody"><tr><td colspan="7">Loading users...</td></tr></tbody>
+</table>
+</div>
+</section>
+</main><footer><div class="container footer-inner"><div class="brand"><span class="brand-mark">B</span><span>BackToBatch Admin</span></div><div>Authorised administrators only</div></div></footer>
+
+<script>
+let allUsers=[];
+let myAdminId=null;
+
+function renderUsers(list){
+ const body=document.getElementById('usersBody');
+ if(!list.length){body.innerHTML='<tr><td colspan="7">No matching users found.</td></tr>';return;}
+ body.innerHTML=list.map(u=>`
+ <tr>
+ <td><strong>${escapeHtml(u.full_name||'Unnamed member')}</strong><br><small>${escapeHtml(u.email||'')}</small></td>
+ <td>${escapeHtml(u.institution||'—')}<br><small>${escapeHtml(u.course||'')}${u.graduation_year?' • '+u.graduation_year:''}</small></td>
+ <td>${escapeHtml(u.city||'—')}</td>
+ <td>${u.is_admin?'<span class="status-pill status-admin">Admin</span>':'Member'}</td>
+ <td>${u.is_suspended?'<span class="status-pill status-suspended">Suspended</span>':'<span class="status-pill status-active">Active</span>'}</td>
+ <td>${u.created_at?new Date(u.created_at).toLocaleDateString():'—'}</td>
+ <td>
+   <div class="actions">
+    ${u.id===myAdminId?''
+      :`<button class="btn btn-small ${u.is_suspended?'btn-soft':'btn-danger'}" onclick="toggleSuspend('${u.id}',${!u.is_suspended})">${u.is_suspended?'Restore':'Suspend'}</button>`}
+    ${u.id===myAdminId?''
+      :`<button class="btn btn-small btn-light" onclick="toggleAdmin('${u.id}',${!u.is_admin})">${u.is_admin?'Remove Admin':'Make Admin'}</button>`}
+   </div>
+ </td>
+ </tr>`).join('');
+}
+
+function escapeHtml(value){
+ return String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+
+async function loadAdmin(){
+ const access=await requireAdmin();if(!access)return;
+ myAdminId=access.session.user.id;
+
+ const {data,error}=await sb.from('admin_user_directory').select('*').order('created_at',{ascending:false});
+ if(error)return showMessage('adminMessage',error.message);
+ allUsers=data||[];
+ document.getElementById('totalUsers').textContent=allUsers.length;
+ document.getElementById('completeProfiles').textContent=allUsers.filter(x=>x.institution&&x.course&&x.graduation_year).length;
+ document.getElementById('adminCount').textContent=allUsers.filter(x=>x.is_admin).length;
+ document.getElementById('suspendedCount').textContent=allUsers.filter(x=>x.is_suspended).length;
+ renderUsers(allUsers);
+}
+
+document.getElementById('userSearch').addEventListener('input',e=>{
+ const q=e.target.value.toLowerCase().trim();
+ renderUsers(!q?allUsers:allUsers.filter(u=>[u.full_name,u.email,u.institution,u.course,u.city].some(v=>String(v||'').toLowerCase().includes(q))));
+});
+
+async function toggleSuspend(userId,state){
+ if(!confirm(state?'Suspend this user?':'Restore this user?'))return;
+ const {error}=await sb.rpc('admin_set_suspension',{target_user:userId,new_state:state});
+ if(error)return showMessage('adminMessage',error.message);
+ showMessage('adminMessage',state?'User suspended.':'User restored.','success');
+ await loadAdmin();
+}
+
+async function toggleAdmin(userId,state){
+ if(!confirm(state?'Grant administrator access?':'Remove administrator access?'))return;
+ const {error}=await sb.rpc('admin_set_role',{target_user:userId,new_admin_state:state});
+ if(error)return showMessage('adminMessage',error.message);
+ showMessage('adminMessage',state?'Administrator access granted.':'Administrator access removed.','success');
+ await loadAdmin();
+}
+
+loadAdmin();
+</script></body></html>
